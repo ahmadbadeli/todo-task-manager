@@ -1,0 +1,43 @@
+/* show output tasks */
+.task-table td {
+  border: none !important;
+  padding: 4px;
+  font-family: monospace;
+  text-align: center;
+  vertical-align: middle;
+  background: none;
+}
+
+.st-key-show-tasks
+  div[data-testid='stColumn']
+  div[data-testid='stElementContainer'] {
+  height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-table tr {
+  border: none;
+}
+.task-table {
+  display: block;
+  width: 30rem;
+}
+
+/* show reminder tasks */
+.reminder-table td {
+  border: none !important;
+  padding: 4px;
+  font-family: monospace;
+  text-align: center;
+  background: none;
+}
+
+.reminder-table tr {
+  border: none;
+}
+.reminder-table {
+  display: block;
+  width: 100%;
+}
