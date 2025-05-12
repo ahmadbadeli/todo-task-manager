@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from functions import save_file, add_task, toggle_done, delete_task, edit_task, remove_category, add_category, upcoming_tasks, pin_task,load_file
+from functions import save_file, add_task, toggle_done, delete_task, edit_task, remove_category, add_category, upcoming_tasks
+from functions import pin_task,load_file,validate_task_data,temp_msg,csv_to_task
 from functions import table_headers, modal
 import time
 
@@ -61,6 +62,19 @@ if not states["status"]:
 else:
     # update states
     save_file(original_tasks,current_layer,states_dict=states)
+
+# reset inputs
+if st.session_state.get('reset-inputs',False):
+    st.session_state['priority-input'] = "No Priority"
+    st.session_state['title-input'] = ''
+    st.session_state['due-date-input'] = datetime.today()
+    st.session_state.pop('reset-inputs')
+
+# reset file
+if st.session_state.get('reset-file',False):
+    st.session_state.pop('import-file-upload')
+    st.session_state.pop('reset-file')
+
 
 # css
 with open("styles.css",'r') as f:
@@ -148,15 +162,37 @@ if tasks:
         # Sort Pinned
         tasks.sort(key=lambda x: x["pinned"],reverse=True)
 
-# # Export Section
-# if tasks:
-#     cols = st.columns(2)
-#     with cols[0]:
-#         df = pd.DataFrame(original_tasks)
-#         st.download_button("Download Original Tasks",df.to_csv(index=False),file_name="tasks.csv",mime="text/csv")
-#     with cols[1]:
-#         df2 = pd.DataFrame(tasks)
-#         st.download_button("Download Filtered Tasks",df2.to_csv(index=False),file_name="tasks.csv",mime="text/csv")
+# Import / Export Section
+with st.container(key='import-export-section'):
+    # Import
+    st.markdown("##### Import from a CSV file",unsafe_allow_html=True)
+    msg = st.empty()
+    uploaded_file = st.file_uploader("Upload tasks file (csv only)", type=["csv"], key='import-file-upload')
+    if uploaded_file: 
+        if st.button('Import',key='import-button'):
+            upload_status,imported_tasks,df = csv_to_task(uploaded_file)
+            if upload_status:
+                valid,message = validate_task_data(imported_tasks)
+                if valid:
+                    save_file(imported_tasks,current_layer,categories=list(df["category"].unique()))
+                    st.session_state['reset-file'] = True
+                    temp_msg(msg,"Data Imported Successfully")
+                    st.rerun(scope='app')
+                else:
+                    st.error(message)
+            else:
+                st.error(imported_tasks)
+
+    # Export
+    if tasks:
+        st.markdown("##### Export to CSV file",unsafe_allow_html=True)
+        cols = st.columns(2)
+        with cols[0]:
+            df = pd.DataFrame(original_tasks)
+            st.download_button("Download Original Tasks",df.to_csv(index=False),file_name="tasks.csv",mime="text/csv")
+        with cols[1]:
+            df2 = pd.DataFrame(tasks)
+            st.download_button("Download Filtered Tasks",df2.to_csv(index=False),file_name="tasks.csv",mime="text/csv")
 
 # show tasks with edit and delete key and Pin
 if tasks:
@@ -377,16 +413,19 @@ with st.container(key="input-section"):
         with cols[1]:
             category = st.selectbox("Category:",key='category-input',options=categories)
             due_date = st.date_input("Due Date:",key="due-date-input",value=datetime.today())
+        msg = st.empty()
         if st.button("Add Task",key=f'add-task-button'):
             if title:
                 due_date = pd.to_datetime(due_date).strftime("%Y-%m-%d")
                 priority_symbol = {"🔴High":"🔴","🟡Medium":"🟡","🟢Low":"🟢","No Priority":""}
                 title = f"{priority_symbol[priority]} {title}"
                 add_task(title,category,due_date,msg,current_layer)
+                st.session_state["reset-inputs"] = True
                 st.rerun(scope='app')
             else:
                 st.warning("Please enter a task before add it!!")
 
+# Modal
 if modal.is_open():
     with modal.container():
         index = st.session_state["edit_index"]

@@ -174,3 +174,40 @@ def pin_task(tasks, task_id, is_filtered,current_layer):
     index = next(i for i, t in enumerate(target_tasks) if t["ID"] == task_id)
     target_tasks[index]["pinned"] = not target_tasks[index]["pinned"]
     save_file(target_tasks,current_layer)
+
+def csv_to_task(uploaded_file):
+    df = pd.read_csv(uploaded_file)
+    default_headers = ["title","pinned","done","category","due_date","ID"]
+    imported_headers = df.columns
+    imported_tasks = []
+    if df["ID"].duplicated().any():
+        return False,'there is duplicated IDs Please edit the file or add a new one',df
+    if all(header in imported_headers for header in default_headers):
+        for _,row in df.iterrows():
+            task = {
+            "title": str(row["title"]),
+            "pinned": row["pinned"],
+            "done": row["done"],
+            "category": str(row["category"]),
+            "due_date": str(row["due_date"]),
+            "ID": str(row["ID"])
+            }
+            imported_tasks.append(task)
+    else:
+        missing_headers = [header for header in default_headers if header not in imported_headers]
+        return False,f"The following headers are missing: {', '.join(missing_headers)}",df
+
+    return True,imported_tasks,df
+
+def validate_task_data(data):
+    required_keys = {"title": str, "pinned": bool, "done": bool, "category": str, "due_date": str, "ID": str}
+    for task in data:
+        for key, expected_type in required_keys.items():
+            if not isinstance(task[key], expected_type):
+                return False, f"Key '{key}' must be of type {expected_type.__name__}"
+        try:
+            datetime.strptime(task["due_date"], "%Y-%m-%d")
+        except:
+            return False, f"Invalid date format in 'due_date', expected YYYY-MM-DD, Please check due_date column and maybe you're using other date formats add YYYY-MM-DD to custom format if using Microsoft Excel for editing"
+    
+    return True, "Valid data"
