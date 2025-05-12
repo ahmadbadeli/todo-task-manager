@@ -275,7 +275,7 @@ if tasks:
                 with cols[4]:
                     prev_toggle_done_button = task["done"]
                     toggle_done_button = st.toggle(" ", value=task["done"], key=f'checkbox_{task["ID"]}')
-                    if prev_toggle_done_button is not None and prev_toggle_done_button != toggle_done_button:
+                    if prev_toggle_done_button != toggle_done_button:
                         toggle_done(tasks, task["ID"], is_filtered,current_layer)
                         st.session_state["toggle_done_button"] = True
                         st.rerun(scope='app')
