@@ -21,7 +21,7 @@ It helps you manage your daily tasks, organize them by categories, set due dates
 
 ## Demo
 
-Check out the live demo of the app here: [Live Demo](https://todo-task-manager-ffck.onrender.com/)
+Check out the live demo of the app here: [Live Demo](https://todo-task-manager-l5jg.onrender.com/)
 
 ## Installation
 
