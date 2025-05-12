@@ -1,43 +1,301 @@
-/* show output tasks */
-.task-table td {
-  border: none !important;
-  padding: 4px;
-  font-family: monospace;
+/* General Rules */
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
+body {
+  margin: 0;
+  font-family: 'Lora', serif;
+}
+.stCheckbox {
+  margin: 0 !important;
+}
+.stSidebar {
+  z-index: 2;
+  position: fixed !important;
+  height: 100vh !important;
+}
+button:focus {
+  border-color: rgba(49, 51, 63, 0.2) !important;
+}
+/* --------------------------- Inputs General Css ---------------------------------- */
+/* Background color for selectbox and multiselect */
+div[data-baseweb='select'] {
+  background-color: #f0f8ff !important;
+  color: black !important;
+  border-radius: 8px;
+}
+
+/* Calendar dropdown style for date_input */
+div[class*='Calendar'] {
+  background-color: #fff3e0 !important;
+  color: black !important;
+}
+
+/* Optional: hover/focus style for select */
+div[data-baseweb='select']:hover {
+  border: 1px solid #2196f3 !important;
+}
+/* ------------------------ End of General CSS for Inputs ------------------------------ */
+
+/* Filter Section */
+.st-key-filter-section {
+  background-color: rgba(0, 81, 131, 0.326);
+  padding: 1rem 2rem;
+  border-radius: 1rem;
+}
+.st-key-filter-section h5 {
   text-align: center;
-  vertical-align: middle;
-  background: none;
 }
 
-.st-key-show-tasks
-  div[data-testid='stColumn']
-  div[data-testid='stElementContainer'] {
-  height: 4rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Tasks General Rules */
+.st-key-show-tasks {
+  background-color: rgba(207, 235, 0, 0.129);
+  padding: 1.5rem 0.5rem;
+  border-radius: 1.5rem;
+  margin: 0;
 }
-
+.st-key-show-tasks h5 {
+  text-align: center;
+}
+.task-table td,
 .task-table tr {
   border: none;
 }
+
+/* Tasks for small Screens */
+.st-key-task-headers {
+  display: none;
+}
 .task-table {
-  display: block;
-  width: 30rem;
+  display: none;
 }
-
-/* show reminder tasks */
-.reminder-table td {
-  border: none !important;
-  padding: 4px;
-  font-family: monospace;
+.task-table-min {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: center;
+  position: absolute;
+  top: -2rem;
+  left: 30px;
+}
+.task-table-min div {
+  padding: 0.4rem;
+}
+.task-table-min-title {
+  width: 70vw;
   text-align: center;
-  background: none;
+}
+[class*='st-key-task-container'] {
+  border: 3px solid rgb(2, 103, 73);
+  padding: 1rem;
+  border-radius: 1rem;
+}
+[class*='pin_'] {
+  display: none;
 }
 
-.reminder-table tr {
-  border: none;
+/* Reminder Section */
+.st-key-reminder-section {
+  background-color: rgba(77, 255, 0, 0.107);
+  padding: 2rem;
+  border-radius: 1rem;
+}
+.st-key-reminder-section h5 {
+  text-align: center;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+.st-key-reminder-section .stMarkdown p {
+  margin-bottom: 0;
+  margin-top: 1rem;
+}
+.st-key-reminder-section .stHorizontalBlock {
+  align-items: flex-end;
+}
+.st-key-reminder-section .st-key-reminder-auto-update {
+  padding: 8px 0;
+}
+.reminder-table-min {
+  margin: 0 auto;
+  font-size: 1.2rem;
 }
 .reminder-table {
-  display: block;
-  width: 100%;
+  display: none;
+}
+
+/* Input Section = Edit Category + Add a Task */
+.st-key-input-section {
+  background-color: rgba(123, 0, 255, 0.148);
+  padding: 1.5rem;
+  border-radius: 1rem;
+}
+
+/* Edit Category Section */
+.st-key-edit-category-section .stHorizontalBlock {
+  align-items: flex-end;
+}
+
+/* -------------------------------------------Edit Modal Section ------------------------------------------- */
+/* change modal position */
+div[data-modal-container='true'][key='edit-task'] {
+  top: 0;
+}
+
+/* modal close buttons */
+.st-key-edit-task-close button {
+  background-color: rgb(233, 175, 175);
+  border: none;
+  width: 20px;
+  height: 10px;
+  padding: 10px 20px;
+  margin: 10px 0;
+  font-size: medium;
+  font-weight: bolder;
+  border-radius: 20px;
+}
+.st-key-edit-task-close button:hover {
+  background-color: red;
+  color: white !important;
+}
+
+/* blur background */
+div[data-modal-container='true'][key='edit-task']::before {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* get the modal to the center */
+div[data-modal-container='true'][key='edit-task'] > div:first-child {
+  margin: auto;
+  max-width: 600px !important;
+}
+
+/* modal popup */
+div[data-modal-container='true'][key='edit-task']
+  > div:first-child
+  > div:first-child {
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  position: relative;
+  margin-top: 2rem;
+}
+div[data-modal-container='true'][key='edit-task']
+  .st-key-edit-task-close
+  button:hover {
+  color: #000000;
+}
+
+/* inputs */
+div[data-modal-container='true'][key='edit-task'] .stDateInput,
+div[data-modal-container='true'][key='edit-task'] .stSelectbox,
+div[data-modal-container='true'][key='edit-task'] .stNumberInput,
+div[data-modal-container='true'][key='edit-task'] .stTextInput {
+  margin-bottom: 1rem;
+}
+div[data-modal-container='true'][key='edit-task'] input {
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+
+/* Save and Cancel Buttons */
+div[data-modal-container='true'][key='edit-task']
+  .st-key-edit-task-button
+  button {
+  background-color: #4caf50 !important;
+  color: #ffffff !important;
+  border-radius: 10px;
+  padding: 0.6rem 1.2rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  margin-right: 2rem;
+}
+div[data-modal-container='true'][key='edit-task']
+  .st-key-edit-task-button
+  button:hover {
+  background-color: #45a049 !important;
+}
+
+div[data-modal-container='true'][key='edit-task'] .st-key-cancel-btn button {
+  background-color: #f44336 !important;
+  color: #ffffff !important;
+  border-radius: 10px;
+  padding: 0.6rem 1.2rem;
+  font-weight: bold;
+}
+div[data-modal-container='true'][key='edit-task']
+  .st-key-cancel-btn
+  button:hover {
+  background-color: #e53935 !important;
+}
+
+.st-key-modal-buttons-container {
+  gap: 1.5rem;
+  flex-direction: row;
+  justify-content: center;
+}
+
+.st-key-modal-buttons-container button {
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------ Queries ------------------------------------------------ */
+/* Tasks for large Screens */
+@media (min-width: 40.1rem) {
+  .task-table-min {
+    display: none;
+  }
+  .task-table {
+    display: block;
+  }
+  [class*='min_pinned_'] {
+    display: none;
+  }
+  [class*='pin_'] {
+    display: block;
+  }
+  .st-key-task-headers {
+    display: block;
+  }
+  [class*='st-key-task-container'] {
+    border: none;
+    padding: 0;
+  }
+  .st-key-show-tasks [data-testid='stHorizontalBlock'] {
+    align-items: center;
+  }
+  .st-key-show-tasks [data-testid='stVerticalBlock'] {
+    gap: 0;
+  }
+  .st-key-show-tasks {
+    text-align: center;
+  }
+}
+/* no padding on sides for small screens */
+@media (max-width: 40.1rem) {
+  .stMainBlockContainer {
+    padding: 0;
+  }
+}
+/* reminder tasks show on large screens */
+@media (min-width: 40.1rem) {
+  /* show reminder tasks */
+  .reminder-table-min {
+    display: none;
+  }
+  .reminder-table {
+    margin: 0 !important;
+    display: block;
+    width: 100%;
+  }
+  .reminder-table td {
+    border: none !important;
+    padding: 0 10px;
+    font-family: monospace;
+    text-align: center;
+    background: none;
+  }
+
+  .reminder-table tr {
+    border: none;
+    background-color: rgba(255, 111, 1, 0.111);
+  }
 }

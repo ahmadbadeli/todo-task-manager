@@ -7,12 +7,30 @@ import time
 
 st.set_page_config(page_title="To Do List",page_icon="📋")
 
-# Global Variables
+# initialize
 data = load_file()
-categories = data["Categories"]
-tasks = data["Tasks"]   
+layers = data["Layers"]
+
+# layer control states
+if 'current-layer' not in st.session_state:
+    st.session_state['current-layer'] = layers[0]
+current_layer = st.session_state['current-layer']
+
+if 'prev-layer' not in st.session_state:
+    st.session_state['prev-layer'] = current_layer
+
+if st.session_state['prev-layer'] != current_layer:
+    # reset session_state
+    for key in st.session_state.keys():
+        del st.session_state[key]
+    st.session_state['current-layer'] = current_layer
+    st.session_state['prev-layer'] = current_layer
+
+# Global Variables
+categories = data[current_layer]["Categories"]
+tasks = data[current_layer]["Tasks"]   
 original_tasks = tasks
-reminder = data["Reminder"]
+reminder = data[current_layer]["Reminder"]
 is_filtered = False
 
 # this part of inintializing happened bacause of sending functions in a seperate file then they cant share st.session_state directly
@@ -23,33 +41,62 @@ if "prev_tasks_len" not in st.session_state:
     st.session_state["prev_tasks_len"] = tasks_len
 if 'edited' not in st.session_state:
     st.session_state['edited'] = False
-
 # initialize Reminder inputs
 if 'toggle-reminder' not in st.session_state:
-    st.session_state['toggle-reminder'] = data["Reminder"]["status"]
+    st.session_state['toggle-reminder'] = data[current_layer]["Reminder"]["status"]
 if 'reminder-days-input' not in st.session_state:
-    st.session_state['reminder-days-input'] = data["Reminder"]["days"]
+    st.session_state['reminder-days-input'] = data[current_layer]["Reminder"]["days"]
 if 'reminder-auto-update' not in st.session_state:
-    st.session_state['reminder-auto-update'] = data["Reminder"]["auto_update"]
+    st.session_state['reminder-auto-update'] = data[current_layer]["Reminder"]["auto_update"]
 
 states = {
     "status" : st.session_state['toggle-reminder'],
     "days" : st.session_state["reminder-days-input"],
     "auto_update" : st.session_state['reminder-auto-update']
     }
-
 # reset reminder check box and update states
 if not states["status"]:
     # reset reminder
-    save_file(original_tasks,states_dict={"status": False, "days": 1, "auto_update": False},reminder_tasks=[],expired_tasks=[])
+    save_file(original_tasks,current_layer,states_dict={"status": False, "days": 1, "auto_update": False},reminder_tasks=[],expired_tasks=[])
 else:
     # update states
-    save_file(original_tasks,states_dict=states)
+    save_file(original_tasks,current_layer,states_dict=states)
 
 # css
 with open("styles.css",'r') as f:
     css_file = f.read()
 st.markdown(f"<style>{css_file}</style>",unsafe_allow_html=True)
+
+# sidebar
+container = st.sidebar.empty()
+
+st.sidebar.selectbox("Select Current Layer:",key="current-layer",options=layers)
+
+layer_name = st.sidebar.text_input("Layer Name:",key='layer-input')
+add_layer = st.sidebar.button("Add",key='add-layer-button')
+if add_layer:
+    if layer_name:
+        if layer_name.lower() not in [layer.lower() for layer in layers]:
+            layers.append(layer_name.title())
+            container.success("Layer Added Successfully")
+            time.sleep(1.5)
+            container.empty()
+            save_file(original_tasks,current_layer,layers=layers)
+            st.rerun(scope='app')
+        else:
+            container.error("Layer Already Existed!!")
+    else:
+        container.error("Please enter a layer")
+
+selected_layer = st.sidebar.selectbox("Select Layer:",key='layer-remove',options=layers)
+remove_layer = st.sidebar.button("Remove",key='remove-layer-button')
+if remove_layer:
+    layers.remove(selected_layer)
+    container.success("Layer Removed Successfully")
+    time.sleep(1.5)
+    container.empty()
+    save_file(original_tasks,current_layer,layers=layers)
+    st.rerun(scope='app')
 
 # main program
 st.title("To-Do List")
@@ -101,106 +148,130 @@ if tasks:
         # Sort Pinned
         tasks.sort(key=lambda x: x["pinned"],reverse=True)
 
-# Export Section
-if tasks:
-    cols = st.columns(2)
-    with cols[0]:
-        df = pd.DataFrame(original_tasks)
-        st.download_button("Download Original Tasks",df.to_csv(index=False),file_name="tasks.csv",mime="text/csv")
-    with cols[1]:
-        df2 = pd.DataFrame(tasks)
-        st.download_button("Download Filtered Tasks",df2.to_csv(index=False),file_name="tasks.csv",mime="text/csv")
+# # Export Section
+# if tasks:
+#     cols = st.columns(2)
+#     with cols[0]:
+#         df = pd.DataFrame(original_tasks)
+#         st.download_button("Download Original Tasks",df.to_csv(index=False),file_name="tasks.csv",mime="text/csv")
+#     with cols[1]:
+#         df2 = pd.DataFrame(tasks)
+#         st.download_button("Download Filtered Tasks",df2.to_csv(index=False),file_name="tasks.csv",mime="text/csv")
 
 # show tasks with edit and delete key and Pin
 if tasks:
     with st.container(key="show-tasks"):
-        st.markdown("##### Tasks:")
-        cols = st.columns([0.2,5,0.9,0.7,0.6])
-        for i,table_header in enumerate(table_headers):
-            cols[i].markdown(f"**{table_header}**")
+        st.markdown("##### Tasks")
+        with st.container(key="task-headers"):
+            # st.markdown(' ')
+            cols = st.columns([0.2,5,0.9,0.7,0.6])
+            for i,table_header in enumerate(table_headers):
+                cols[i].markdown(f"**{table_header}**")
         
         for i,task in enumerate(tasks):
             status = "done" if task["done"] else "pending"
-            with cols[0]:
-                st.checkbox(" ", value=task["pinned"], key=f"pin_{task['ID']}", on_change=pin_task, args=(tasks, task["ID"], is_filtered))
+            with st.container(key=f"task-container_{i}"):
+                cols = st.columns([0.2,5,0.9,0.7,0.6])
+                with cols[0]:
+                    st.checkbox(" ", value=task["pinned"], key=f"pin_{task['ID']}", on_change=pin_task, args=(tasks, task["ID"], is_filtered, current_layer))
+                    st.checkbox("📌", value=task["pinned"], key=f"min_pinned_{task['ID']}", on_change=pin_task, args=(tasks, task["ID"], is_filtered, current_layer))
 
-            with cols[1]:
-                show_date = pd.to_datetime(task["due_date"]).strftime("%B %d, %Y")
-                due_date = pd.to_datetime(task["due_date"]).date()
-                today_date = datetime.today().date()
+                with cols[1]:
+                    show_date = pd.to_datetime(task["due_date"]).strftime("%B %d, %Y")
+                    due_date = pd.to_datetime(task["due_date"]).date()
+                    today_date = datetime.today().date()
 
-                if due_date == today_date:
-                    if task["done"]:
-                        color = "green"
+                    if due_date == today_date:
+                        if task["done"]:
+                            color = "green"
+                        else:
+                            color = "orange"
+                    elif due_date < today_date:
+                        if task["done"]:
+                            color = "gray"
+                        else:
+                            color = "red"
                     else:
-                        color = "orange"
-                elif due_date < today_date:
-                    if task["done"]:
-                        color = "gray"
-                    else:
-                        color = "red"
-                else:
-                    if task["done"]:
-                        color = "green"
-                    else:
-                        color = "black"
-                
-                # due_date = due_date.strftime("%Y-%m-%d")
+                        if task["done"]:
+                            color = "green"
+                        else:
+                            color = "black"
+                    
+                    # due_date = due_date.strftime("%Y-%m-%d")
 
-                row = f"""
-                <table class="task-table" style="color:{color};">
-                <tr>
-                    <td style="width:45%;">{task['title']}</td>
-                    <td style="width:5rem;">{task['category']}</td>
-                    <td style="width:10rem;">{task['due_date']}</td>
-                    <td style="width:5rem;">{status}</td>
-                </tr>
-                </table>
-                """
-                st.markdown(row, unsafe_allow_html=True)
+                    row = f"""
+                    <table class="task-table" style="color:{color};">
+                    <tr>
+                        <td style="width:10.5rem">{task['title']}</td>
+                        <td style="width:5.7rem">{task['category']}</td>
+                        <td style="white-space: nowrap;">{task['due_date']}</td>
+                        <td>{status}</td>
+                    </tr>
+                    </table>
+                    """
+                    # for small screens
+                    row_min = f"""
+                    <div class="task-table-min" style="color:{color};">
+                        <div class="task-table-min-title">{task['title']}</div>
+                        <div style="color:black;font-weight:bold;width:50%;text-align:right">
+                            <div>Category:</div>
+                            <div>Due Date:</div>
+                            <div>Status:</div>
+                        </div>
+                        <div style="width:50%;">
+                            <div>{task['category']}</div>
+                            <div>{task['due_date']}</div>
+                            <div>{status}</div>
+                        </div>
+                    </div>
+                    """
+                    st.markdown(row, unsafe_allow_html=True)
+                    st.markdown(row_min, unsafe_allow_html=True)
 
-            with cols[2]:
-                st.button("delete",key=f'delete_{i}',on_click=delete_task,args=(tasks,i,is_filtered))
+                with cols[2]:
+                    st.button("❌",key=f'delete_{i}',on_click=delete_task,args=(tasks,i,is_filtered,current_layer))
 
-            with cols[3]:
-                if st.button("Edit",key=f'edit_{i}'):
-                    st.session_state['edit_index'] = i
-                    modal.open()
+                with cols[3]:
+                    if st.button("📝",key=f'edit_{i}'):
+                        st.session_state['edit_index'] = i
+                        modal.open()
 
-            with cols[4]:
-                prev_toggle_done_button = task["done"] if not None else None
-                toggle_done_button = st.toggle(" ", value=task["done"], key=f'checkbox_{task["ID"]}')
-                if prev_toggle_done_button is not None and prev_toggle_done_button != toggle_done_button:
-                    toggle_done(tasks, task["ID"], is_filtered)
-                    st.session_state["toggle_done_button"] = True
-
+                with cols[4]:
+                    prev_toggle_done_button = task["done"]
+                    toggle_done_button = st.toggle(" ", value=task["done"], key=f'checkbox_{task["ID"]}')
+                    if prev_toggle_done_button is not None and prev_toggle_done_button != toggle_done_button:
+                        toggle_done(tasks, task["ID"], is_filtered,current_layer)
+                        st.session_state["toggle_done_button"] = True
+                        st.rerun(scope='app')
+            
+            
 # Reminder
 if st.toggle("Add a Reminder",key="toggle-reminder"):   
     with st.container(key='reminder-section'):
         st.markdown("##### Reminder:")
-        cols = st.columns([4,1.5,1])
+        cols = st.columns([4,1.2,1.7])
         with cols[0]:
             days = st.number_input("days until due date:",min_value = 1, step= 1, key = "reminder-days-input")
             st.session_state['reminder-days'] = days
             states["days"] = days
         
         with cols[1]:
-            st.button("Set Days",key="reminder-run-button",on_click=upcoming_tasks,args=(days,))
+            st.button("Set Days",key="reminder-run-button",on_click=upcoming_tasks,args=(days,current_layer,))
 
         with cols[2]:
             if st.toggle("auto update",key="reminder-auto-update"):
-                if (st.session_state["prev_tasks_len"] != tasks_len):
-                    upcoming_tasks(days)
+                if st.session_state["prev_tasks_len"] != tasks_len:
+                    upcoming_tasks(days,current_layer)
                     st.session_state.pop("prev_tasks_len")
                     st.rerun(scope='app')
                 
                 elif st.session_state["edited"]:
-                    upcoming_tasks(days)
+                    upcoming_tasks(days,current_layer)
                     st.session_state.pop("edited")
                     st.rerun(scope='app')
-                
+
                 elif st.session_state.get("toggle_done_button",False):
-                    upcoming_tasks(days)
+                    upcoming_tasks(days,current_layer)
                     st.session_state.pop("toggle_done_button")
                     st.rerun(scope='app')
                 
@@ -223,13 +294,27 @@ if st.toggle("Add a Reminder",key="toggle-reminder"):
                 row = f"""
                 <table class="reminder-table" style="color:{color};">
                 <tr>
-                    <td style="width:45%;">{task['title']}</td>
-                    <td style="width:5rem;">{task['category']}</td>
-                    <td style="width:10rem;">{task['due_date']}</td>
-                    <td style="width:5rem;">{status}</td>
+                    <td style="width:300px">{task['title']}</td>
+                    <td style="width:100px">{task['category']}</td>
+                    <td style="white-space: nowrap;">{task['due_date']}</td>
+                    <td>{status}</td>
                 </tr>
                 </table>
                 """
+                # for Small Screens
+                row_min = f"""
+                <table class="reminder-table-min" style="color:{color};text-align:center;">
+                <tr>
+                    <td colspan='3' style="font-weight:bold">{task['title']}</td>
+                </tr>
+                <tr>
+                    <td>{task['category']}</td>
+                    <td style="white-space: nowrap;">{task['due_date']}</td>
+                    <td>{status}</td>
+                </tr>
+                </table>
+                """
+                st.markdown(row_min, unsafe_allow_html=True)
                 st.markdown(row, unsafe_allow_html=True)
         # show Expired Tasks
         if reminder["expired"]:
@@ -243,50 +328,64 @@ if st.toggle("Add a Reminder",key="toggle-reminder"):
                 row = f"""
                 <table class="reminder-table" style="color:red;">
                 <tr>
-                    <td style="width:45%;">{task['title']}</td>
-                    <td style="width:5rem;">{task['category']}</td>
-                    <td style="width:10rem;">{task['due_date']}</td>
-                    <td style="width:5rem;">{status}</td>
+                    <td style="width:300px">{task['title']}</td>
+                    <td style="width:100px">{task['category']}</td>
+                    <td style="white-space: nowrap;">{task['due_date']}</td>
+                    <td>{status}</td>
                 </tr>
                 </table>
                 """
+                # for Small Screens
+                row_min = f"""
+                <table class="reminder-table-min" style="color:red;text-align:center;">
+                <tr>
+                    <td colspan='3' style="font-weight:bold">{task['title']}</td>
+                </tr>
+                <tr>
+                    <td>{task['category']}</td>
+                    <td style="white-space: nowrap;">{task['due_date']}</td>
+                    <td>{status}</td>
+                </tr>
+                </table>
+                """
+                st.markdown(row_min, unsafe_allow_html=True)
                 st.markdown(row, unsafe_allow_html=True)
 
 
-
-# add or remove a category
-with st.container(key='edit-category-section'):
-    st.markdown("##### add or remove a category")
+with st.container(key="input-section"):
+    # add or remove a category
     msg = st.empty()
-    cols = st.columns([3,1.1,3,1])
-    with cols[0]:
-        category = st.selectbox("select",options=categories,key='remove-category')
-    with cols[1]:
-        st.button('remove',key='remove-category-button',on_click=remove_category,args=(category,msg,))
-    with cols[2]:
-        category = st.text_input("Write a category",key='add-category')
-    with cols[3]:
-        st.button('add',key='add-category-button',on_click=add_category,args=(category,msg,))
+    with st.container(key='edit-category-section'):
+        st.markdown("##### add or remove a category")
+        cols = st.columns([3,1.4,3,1])
+        with cols[0]:
+            category = st.selectbox("select",options=categories,key='remove-category')
+        with cols[1]:
+            st.button('remove',key='remove-category-button',on_click=remove_category,args=(category,msg,current_layer))
+        with cols[2]:
+            category = st.text_input("Write a category",key='add-category')
+        with cols[3]:
+            st.button('add',key='add-category-button',on_click=add_category,args=(category,msg,current_layer))
 
-# add a task
-with st.container(key="task-input"):
-    st.markdown("##### Add a Task")
-    cols = st.columns(2)
-    with cols[0]:
-        title = st.text_input("New Task: ",key='title-input')
-        priority = st.selectbox("Priority:",key='priority-input',options=["🔴High","🟡Medium","🟢Low","No Priority"],index=3)
-    with cols[1]:
-        category = st.selectbox("Category:",key='category-input',options=categories)
-        due_date = st.date_input("Due Date:",key="due-date-input",value=datetime.today())
-    if st.button("Add Task",key=f'add-task-button'):
-        if title:
-            due_date = pd.to_datetime(due_date).strftime("%Y-%m-%d")
-            priority_symbol = {"🔴High":"🔴","🟡Medium":"🟡","🟢Low":"🟢","No Priority":""}
-            title = f"{priority_symbol[priority]} {title}"
-            add_task(title,category,due_date)
-            st.rerun(scope='app')
-        else:
-            st.warning("Please enter a task before add it!!")
+    # add a task
+    with st.container(key="task-input"):
+        st.markdown("##### Add a Task")
+        cols = st.columns(2)
+        with cols[0]:
+            title = st.text_input("New Task: ",key='title-input')
+            priority = st.selectbox("Priority:",key='priority-input',options=["🔴High","🟡Medium","🟢Low","No Priority"],index=3)
+        with cols[1]:
+            category = st.selectbox("Category:",key='category-input',options=categories)
+            due_date = st.date_input("Due Date:",key="due-date-input",value=datetime.today())
+        if st.button("Add Task",key=f'add-task-button'):
+            if title:
+                due_date = pd.to_datetime(due_date).strftime("%Y-%m-%d")
+                priority_symbol = {"🔴High":"🔴","🟡Medium":"🟡","🟢Low":"🟢","No Priority":""}
+                title = f"{priority_symbol[priority]} {title}"
+                add_task(title,category,due_date,msg,current_layer)
+                st.rerun(scope='app')
+            else:
+                st.warning("Please enter a task before add it!!")
 
 if modal.is_open():
     with modal.container():
@@ -297,19 +396,18 @@ if modal.is_open():
         due_date = st.date_input("Edit Due Date",key='due-date-edit',value=pd.to_datetime(tasks[index]["due_date"]).date())
         status = st.radio("Change status:",key='edit-status',options=["pending","done"],index=1 if tasks[index]["done"] else 0)
         msg = st.empty()
-        cols = st.columns(2)
-        with cols[0]:
-            if st.button("Edit Task",key='edit-task-button'):
-                if title:
-                    due_date = due_date.strftime("%Y-%m-%d")
-                    edit_task(tasks,title,index,status,category,due_date,is_filtered,pinned)
+        with st.container(key="modal-buttons-container"):
+            with st.container(key="edit-task-container"):
+                if st.button("Edit Task",key='edit-task-button'):
+                    if title:
+                        due_date = due_date.strftime("%Y-%m-%d")
+                        edit_task(tasks,title,index,status,category,due_date,is_filtered,pinned,current_layer)
+                        st.session_state["edit-task-opened"] = False
+                        st.session_state["edited"] = True
+                        st.rerun(scope='app')
+                    else:
+                        msg.warning("Task can not be empty!!")
+            with st.container(key="cancel-modal-container"):
+                if st.button("Cancel",key='cancel-btn'):
                     st.session_state["edit-task-opened"] = False
-                    st.session_state["edited"] = True
                     st.rerun(scope='app')
-                else:
-                    msg.warning("Task can not be empty!!")
-        with cols[1]:
-            if st.button("Cancel",key='cancel-btn'):
-                st.session_state["edit-task-opened"] = False
-                st.rerun(scope='app')
-
